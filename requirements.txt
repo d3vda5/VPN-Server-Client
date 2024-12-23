@@ -1,0 +1,11 @@
+# Core Python libraries (no need to install, included with Python)
+# logging - For debug and runtime logging
+
+# Python libraries
+cryptography==41.0.1       # AES encryption and decryption (core for secure communication)
+
+# Networking and system utilities
+pyroute2==0.6.10           # TUN/TAP interface management and IP routing
+
+# Recommended versions
+# These versions have been tested for compatibility with Python 3.8+ and your VPN project.

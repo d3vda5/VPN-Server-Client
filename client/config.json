@@ -1,0 +1,13 @@
+{
+  "server_ip": "192.168.18.79",
+  "server_port": 1194,
+  "encryption_key": "your-secure-32-byte-key-here1234",
+  "tun_config": {
+      "ip": "10.0.0.2",
+      "netmask": "255.255.255.0"
+  },
+  "logging": {
+      "level": "INFO",
+      "file": "client.log"
+  }
+}

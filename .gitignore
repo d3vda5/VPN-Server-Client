@@ -1,0 +1,16 @@
+# Python cache files
+__pycache__/
+*.pyc
+
+# Environment files
+.env
+
+# TUN device configuration or temporary files
+tun*
+
+# Logs and debug output
+*.log
+
+# System files
+.DS_Store
+Thumbs.db
