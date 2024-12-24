@@ -1,6 +1,7 @@
 import socket
 import json
 import threading
+import platform
 from encryption import AESHandler
 from tun_handler import TUNHandler
 
@@ -18,77 +19,56 @@ class VPNClient:
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.sock.settimeout(100000)  # Set a socket timeout
         self.aes_handler = AESHandler(ENCRYPTION_KEY)  # AES encryption handler
-        self.tun = TUNHandler()  # TUN device handler
+        self.tun = self.create_tun_handler()  # TUN device handler
         self.cleaned_up = False  # Flag to track cleanup
+
+    def create_tun_handler(self):
+        """Creates and configures the TUN/TAP device handler based on the OS"""
+        if platform.system() == "Windows":
+            return TUNHandler(dev_name="tap1")  # Use TAP device for Windows
+        else:
+            return TUNHandler(dev_name="tun1")  # Use TUN device for Linux
 
     def connect_to_server(self):
         """Connects to the server and handles errors in connection"""
         try:
             self.sock.connect(self.server_address)
             print(f"Connected to server at {self.server_address}")
-        except Exception as e:
+        except socket.error as e:
             print(f"Error connecting to server: {e}")
-            self.cleanup()  # Perform cleanup on error
-            exit(1)
-
-    def handle_server_traffic(self):
-        """Handles receiving encrypted traffic from the server, decrypts and writes to TUN device"""
-        try:
-            while True:
-                encrypted_data = self.sock.recv(4096)
-                if not encrypted_data:
-                    print("Disconnected from server")
-                    break
-                decrypted_data = self.aes_handler.decrypt(encrypted_data)
-                if decrypted_data:
-                    self.tun.write(decrypted_data)  # Write decrypted data to the TUN device
-        except Exception as e:
-            print(f"Error receiving data from server: {e}")
-        finally:
             self.cleanup()
 
-    def handle_tun_traffic(self):
-        """Handles reading traffic from the TUN device, encrypts it and sends it to the server"""
+    def handle_server(self):
+        """Handles communication with the server"""
         try:
             while True:
-                packet = self.tun.read()  # Read data from TUN device
-                encrypted_packet = self.aes_handler.encrypt(packet)  # Encrypt data
-                if encrypted_packet:
-                    self.sock.send(encrypted_packet)  # Send encrypted data to server
+                data = self.sock.recv(4096)
+                if not data:
+                    print("No data received from server, closing connection")
+                    break
+                decrypted_data = self.aes_handler.decrypt(data)
+                self.tun.write(decrypted_data)
+                response = self.tun.read()
+                encrypted_response = self.aes_handler.encrypt(response)
+                self.sock.sendall(encrypted_response)
         except Exception as e:
-            print(f"Error sending data to server: {e}")
+            print(f"Error handling server: {e}")
         finally:
             self.cleanup()
 
     def cleanup(self):
-        """Closes resources and cleans up"""
-        if self.cleaned_up:
-            return  # Avoid cleaning up twice
-        self.cleaned_up = True  # Set the flag to True
+        """Cleans up resources"""
+        if not self.cleaned_up:
+            self.sock.close()
+            self.tun.close()
+            self.cleaned_up = True
+            print("Cleaned up resources")
 
-        try:
-            if self.tun:
-                self.tun.close()
-            if self.sock:
-                self.sock.close()
-        except Exception as e:
-            print(f"Error during cleanup: {e}")
-        print("Resources cleaned up")
-
-    def start(self):
-        """Initializes connection and starts threads for handling traffic"""
+    def run(self):
+        """Main method to run the VPN client"""
         self.connect_to_server()
-
-        # Start threads for handling server communication and TUN traffic
-        server_thread = threading.Thread(target=self.handle_server_traffic, daemon=True)
-        tun_thread = threading.Thread(target=self.handle_tun_traffic, daemon=True)
-
-        server_thread.start()
-        tun_thread.start()
-
-        server_thread.join()
-        tun_thread.join()
+        self.handle_server()
 
 if __name__ == "__main__":
     client = VPNClient()
-    client.start()
+    client.run()

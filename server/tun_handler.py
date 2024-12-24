@@ -1,7 +1,12 @@
 import os
-import fcntl
+import platform
 import struct
 import subprocess
+import ctypes
+from ctypes import wintypes
+
+if platform.system() != "Windows":
+    import fcntl
 
 class TUNHandler:
     TUNSETIFF = 0x400454ca
@@ -18,44 +23,71 @@ class TUNHandler:
             self.close()
 
     def create_tun_device(self):
+        if platform.system() == "Windows":
+            return self.create_tap_device_windows()
+        else:
+            return self.create_tun_device_linux()
+
+    def create_tun_device_linux(self):
         try:
             tun_fd = os.open("/dev/net/tun", os.O_RDWR)
             ifr = struct.pack("16sH", self.dev_name.encode(), self.IFF_TUN | self.IFF_NO_PI)
             fcntl.ioctl(tun_fd, self.TUNSETIFF, ifr)
             print(f"TUN device {self.dev_name} created")
             return tun_fd
-        except FileNotFoundError:
-            raise RuntimeError("TUN/TAP device not found. Ensure the /dev/net/tun device exists.")
-        except PermissionError:
-            raise RuntimeError("Permission denied. Run the server with elevated privileges.")
         except Exception as e:
-            raise RuntimeError(f"Unexpected error while creating TUN device: {e}")
+            print(f"Error creating TUN device: {e}")
+            raise
 
-    def configure_tun_device(self, ip="10.0.0.1", netmask="255.255.255.0"):
+    def create_tap_device_windows(self):
+        try:
+            # Ensure you have installed the TAP driver from OpenVPN
+            os.system(f'netsh interface ip set address name="{self.dev_name}" static 10.0.0.2 255.255.255.0')
+            print(f"TAP device {self.dev_name} created and configured with IP 10.0.0.2")
+            return None  # Windows TAP device does not use a file descriptor
+        except Exception as e:
+            print(f"Error creating TAP device: {e}")
+            raise
+
+    def configure_tun_device(self, ip, netmask="255.255.255.0"):
+        if platform.system() == "Windows":
+            self.configure_tun_device_windows(ip, netmask)
+        else:
+            self.configure_tun_device_linux(ip, netmask)
+
+    def configure_tun_device_windows(self, ip, netmask):
+        try:
+            os.system(f'netsh interface ip set address name="{self.dev_name}" static {ip} {netmask}')
+            print(f"TAP device {self.dev_name} configured with IP {ip}")
+        except Exception as e:
+            print(f"Error configuring TAP device: {e}")
+            raise
+
+    def configure_tun_device_linux(self, ip, netmask):
         try:
             subprocess.run(["ip", "addr", "add", f"{ip}/24", "dev", self.dev_name], check=True)
             subprocess.run(["ip", "link", "set", "dev", self.dev_name, "up"], check=True)
             print(f"TUN device {self.dev_name} configured with IP {ip}")
         except subprocess.CalledProcessError as e:
             print(f"Error configuring TUN device: {e}")
+            raise
 
     def read(self, buffer_size=4096):
-        try:
+        if self.tun_fd:
             return os.read(self.tun_fd, buffer_size)
-        except OSError as e:
-            print(f"Error reading from TUN device: {e}")
-            return b""
+        else:
+            raise NotImplementedError("Read operation is not implemented for Windows TAP device")
 
     def write(self, data):
-        try:
+        if self.tun_fd:
             os.write(self.tun_fd, data)
-        except OSError as e:
-            print(f"Error writing to TUN device: {e}")
+        else:
+            raise NotImplementedError("Write operation is not implemented for Windows TAP device")
 
     def close(self):
-        if self.tun_fd:
-            try:
+        try:
+            if self.tun_fd:
                 os.close(self.tun_fd)
                 print(f"TUN device {self.dev_name} closed")
-            except OSError as e:
-                print(f"Error closing TUN device: {e}")
+        except Exception as e:
+            print(f"Error closing TUN device: {e}")
