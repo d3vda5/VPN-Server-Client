@@ -7,7 +7,7 @@ from encryption import AESHandler
 from tun_handler import TUNHandler
 
 # Load server configuration
-with open("server/config.json", "r") as config_file:
+with open("./config.json", "r") as config_file:
     config = json.load(config_file)
 
 SERVER_IP = config["server_ip"]

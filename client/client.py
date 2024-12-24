@@ -5,7 +5,7 @@ from encryption import AESHandler
 from tun_handler import TUNHandler
 
 # Load client configuration
-with open("client/config.json", "r") as config_file:
+with open("./config.json", "r") as config_file:
     config = json.load(config_file)
 
 SERVER_IP = config["server_ip"]
