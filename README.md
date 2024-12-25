@@ -23,11 +23,13 @@ vpn_project/
 │   ├── tun_handler.py       # Manages TUN device for the client
 │   ├── encryption.py        # AES encryption/decryption module
 │   ├── config.json          # Client configuration
+│   ├── vpn-client-setup.ps1 # PowerShell script to set up the client on Windows
 ├── server/
 │   ├── server.py            # Main server logic
 │   ├── tun_handler.py       # Manages TUN device for the server
 │   ├── encryption.py        # AES encryption/decryption module
 │   ├── config.json          # Server configuration
+│   ├── setup-vpn-firewall.ps1 # PowerShell script to set up firewall rules on Windows
 ├── requirements.txt         # Python dependencies
 ├── README.md                # Project overview and instructions
 ├── INSTALL.md               # Installation guide
@@ -42,11 +44,12 @@ vpn_project/
 
 ### **Prerequisites**
 
-1. 🖥️ **Operating System**: Linux with TUN/TAP support.
+1. 🖥️ **Operating System**: Linux or Windows with TUN/TAP support.
 2. 🐍 **Python**: Version 3.8 or higher.
 3. ⚙️ **Required Tools**:
-   - `iproute2` for managing TUN/TAP devices.
-   - Build tools (`build-essential`, `libssl-dev`, `python3-dev`) for compiling dependencies.
+   - `iproute2` for managing TUN/TAP devices on Linux.
+   - Build tools (`build-essential`, `libssl-dev`, `python3-dev`) for compiling dependencies on Linux.
+   - OpenVPN TAP driver for Windows.
 
 Install the system dependencies:
 ```bash
@@ -58,7 +61,7 @@ sudo apt install -y iproute2 build-essential libssl-dev python3-dev
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/yourusername/vpn_project.git
+   git clone https://github.com/d3vda5/VPN-Server-Client.git
    cd vpn_project
    ```
 
@@ -76,7 +79,7 @@ Update the `config.json` files in the `server/` and `client/` directories with y
 {
     "server_ip": "0.0.0.0",
     "server_port": 1194,
-    "encryption_key": "your-secure-32-byte-key-here"
+    "encryption_key": "your-secure-32-byte-key-here1234"
 }
 ```
 
@@ -85,7 +88,7 @@ Update the `config.json` files in the `server/` and `client/` directories with y
 {
     "server_ip": "192.168.1.100",
     "server_port": 1194,
-    "encryption_key": "your-secure-32-byte-key-here"
+    "encryption_key": "your-secure-32-byte-key-here1234"
 }
 ```
 
@@ -96,31 +99,67 @@ Make sure the `encryption_key` matches on both server and client.
 ## 🖥️ **Usage**
 
 ### **Starting the Server**
+
+#### On Linux:
 Run the server with elevated privileges (to configure the TUN device):
 ```bash
 sudo python3 server/server.py
 ```
 
+#### On Windows:
+Run the server with administrator privileges:
+```sh
+python server/server.py
+```
+
 Monitor the logs to ensure the server is running and waiting for connections.
 
 ### **Starting the Client**
+
+#### On Linux:
 Run the client with elevated privileges (to configure the TUN device):
 ```bash
 sudo python3 client/client.py
 ```
+
+#### On Windows:
+1. **Install OpenVPN TAP Driver**:
+   - Download the OpenVPN TAP driver from [OpenVPN's official website](https://openvpn.net/community-downloads/).
+   - Run the installer and follow the instructions to install the TAP driver.
+
+2. **Run PowerShell Scripts**:
+   - Open PowerShell as Administrator.
+   - Run the client setup script:
+     ```powershell
+     .\client\vpn-client-setup.ps1
+     ```
+   - Run the firewall setup script:
+     ```powershell
+     .\server\setup-vpn-firewall.ps1
+     ```
+
+3. **Start the Client**:
+   - Run the client with administrator privileges:
+     ```sh
+     python client/client.py
+     ```
 
 The client will connect to the server, receive an IP address, and establish the VPN connection.
 
 ### **Verify the Connection**
 1. Check the TUN device configuration:
    ```bash
-   ip addr show tun0  # Server-side
-   ip addr show tun1  # Client-side
+   ip addr show tun0  # Server-side on Linux
+   ip addr show tun1  # Client-side on Linu
    ```
+   On Windows, use:
+   ```sh
+   ipconfig /all
+   ```
+
 2. Use tools like `ping` or `tcpdump` to verify traffic flow.
 
 ---
-
 
 ### **IP Route Configuration**
 The project automatically configures IP routes after connecting:
@@ -150,10 +189,11 @@ Ensure the script is executable and located in the `scripts/` directory.
 
 ### Common Issues
 1. ❌ **TUN Device Not Found**:
-   - Ensure `/dev/net/tun` exists and has proper permissions:
+   - Ensure `/dev/net/tun` exists and has proper permissions on Linux:
      ```bash
      sudo chmod 666 /dev/net/tun
      ```
+   - Ensure the TAP driver is installed on Windows.
 
 2. ❌ **Connection Timeout**:
    - Verify the `server_ip` and `server_port` in the client configuration.
