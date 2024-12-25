@@ -1,4 +1,4 @@
-# 🚀 **VPN Project**
+# 🚀 **VPN-Server-Client**
 
 A lightweight and secure VPN implementation using Python. This project leverages TUN/TAP devices and AES encryption for secure communication in a client-server architecture.
 
@@ -17,19 +17,21 @@ A lightweight and secure VPN implementation using Python. This project leverages
 ## 📂 **Project Structure**
 
 ```plaintext
-vpn_project/
+VPN-Server-Client/
 ├── client/
 │   ├── client.py            # Main client logic
 │   ├── tun_handler.py       # Manages TUN device for the client
 │   ├── encryption.py        # AES encryption/decryption module
 │   ├── config.json          # Client configuration
 │   ├── vpn-client-setup.ps1 # PowerShell script to set up the client on Windows
+│   ├── vpn-client-setup.sh  # Shell script to set up the client on Linux
 ├── server/
 │   ├── server.py            # Main server logic
 │   ├── tun_handler.py       # Manages TUN device for the server
 │   ├── encryption.py        # AES encryption/decryption module
 │   ├── config.json          # Server configuration
 │   ├── setup-vpn-firewall.ps1 # PowerShell script to set up firewall rules on Windows
+│   ├── setup-vpn-firewall.sh  # Shell script to set up firewall rules on Linux
 ├── requirements.txt         # Python dependencies
 ├── README.md                # Project overview and instructions
 ├── INSTALL.md               # Installation guide
@@ -62,7 +64,7 @@ sudo apt install -y iproute2 build-essential libssl-dev python3-dev
 1. Clone the repository:
    ```bash
    git clone https://github.com/d3vda5/VPN-Server-Client.git
-   cd vpn_project
+   cd VPN-Server-Client
    ```
 
 2. Install Python dependencies:
@@ -117,10 +119,22 @@ Monitor the logs to ensure the server is running and waiting for connections.
 ### **Starting the Client**
 
 #### On Linux:
-Run the client with elevated privileges (to configure the TUN device):
-```bash
-sudo python3 client/client.py
-```
+1. **Run Shell Scripts**:
+   - Open a terminal.
+   - Run the client setup script:
+     ```bash
+     sudo ./client/vpn-client-setup.sh
+     ```
+   - Run the firewall setup script:
+     ```bash
+     sudo ./server/setup-vpn-firewall.sh
+     ```
+
+2. **Start the Client**:
+   - Run the client with elevated privileges:
+     ```bash
+     sudo python3 client/client.py
+     ```
 
 #### On Windows:
 1. **Install OpenVPN TAP Driver**:
@@ -150,7 +164,7 @@ The client will connect to the server, receive an IP address, and establish the 
 1. Check the TUN device configuration:
    ```bash
    ip addr show tun0  # Server-side on Linux
-   ip addr show tun1  # Client-side on Linu
+   ip addr show tun1  # Client-side on Linux
    ```
    On Windows, use:
    ```sh
